@@ -1,0 +1,1 @@
+{"name":"PL/SQL Dynamic Columns","tagline":"An Oracle PL/SQL package to support variable number of columns stored inside a single SQL table column.","body":"This PLSQL package allows application to pack multiple values in a single Oracle database columns. ","google":"","note":"Don't delete this file! It's used internally to help with page regeneration."}
