@@ -3,7 +3,10 @@ REM Dynamic Columns (DC) Demo
 REM
 REM Last Modified: 3/23/2012 12:15 PM
 REM 
+REM Requires: utldyc.sql
+REM
 
+spool demo.log
 
 set echo       on
 set pagesize 1000
@@ -127,7 +130,9 @@ create index xEMP_food on xEMP(COLUMN_GET(dyncol, 2));
 explain plan for 
   select /*+ use_index(e) */ ename from xEMP e 
   where COLUMN_GET(dyncol, 2) = 'Pizza';
+set echo off
 @?/rdbms/admin/utlxpls
+set echo on
 
 REM
 REM List the DC in an XML wrapper
@@ -139,3 +144,5 @@ REM Show the DC's internal representation (for interpretation see implementation
 REM
 select ename, dyncol from xEMP;
 
+spool off
+exit

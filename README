@@ -1,1 +1,1 @@
-This PLSQL package allows application to pack multiple values in a single Oracle database columns. 
+This PLSQL package allows application to pack multiple values in a single Oracle database columns. This package implements functionality similar to that offered by MariaDB (https://mariadb.com/kb/en/dynamic-columns/).

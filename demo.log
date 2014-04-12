@@ -1,0 +1,396 @@
+SQL> 
+SQL> set echo	    on
+SQL> set pagesize 1000
+SQL> set linesize  200
+SQL> 
+SQL> col json	   for a80
+SQL> col xml	   for a80
+SQL> col dyncol    for a50
+SQL> col blob	   for a80
+SQL> col "Has C2?" for a10
+SQL> col list	   for a30
+SQL> col food	   for a15
+SQL> col color	   for a15
+SQL> col telephone for a15
+SQL> 
+SQL> REM
+SQL> REM Create an eXtensible EMP table with a blob to hold DC
+SQL> REM
+SQL> drop table xEMP;
+
+Table dropped.
+
+SQL> 
+SQL> begin
+  2  	 execute immediate
+  3  	    'create table xEMP ('
+  4  	 || ' empno		number(4) not null,'
+  5  	 || ' ename		varchar2(10),'
+  6  	 || ' job		varchar2(9),'
+  7  	 || ' mgr		number(4),'
+  8  	 || ' hiredate		date,'
+  9  	 || ' sal		number(7,2),'
+ 10  	 || ' comm		number(7,2),'
+ 11  	 || ' deptno		number(2),'
+ 12    $if dbms_db_version.ver_le_11_2 $then
+ 13  	 || ' dyncol		varchar2(4000)	       /* DC storage */'
+ 14    $else
+ 15  	 || ' dyncol		varchar2(4000)	      /* DC storage */'
+ 16    $end
+ 17  	 || ')';
+ 18  end;
+ 19  /
+
+PL/SQL procedure successfully completed.
+
+SQL> 
+SQL> REM
+SQL> REM Populate the xEMP table with standard EMP rows and 4 DC
+SQL> REM
+SQL> insert into xEMP
+  2    select EMP.*,
+  3  	      case when ename != 'SCOTT' then
+  4  	       COLUMN_CREATE (c1 => rownum,
+  5  			      c2 => decode(mod(empno,3),
+  6  					   0, 'Pancake',
+  7  					   1, 'Muffin'),
+  8  			      c3 => decode(mod(empno,4),
+  9  					   0, 'Blue',
+ 10  					   1, 'Green',
+ 11  					   2, 'Yellow'),
+ 12  			      c4 => '415-209-' || empno)
+ 13  	      else null end
+ 14    from EMP;
+
+14 rows created.
+
+SQL> 
+SQL> REM
+SQL> REM List the DC in an JSON wrapper
+SQL> REM
+SQL> select ename, COLUMN_JSON(dyncol) json from xEMP;
+
+ENAME      JSON                                                                                                                                                                                         
+---------- --------------------------------------------------------------------------------                                                                                                             
+SMITH      {"C1":"1", "C2":"Muffin", "C3":"Green", "C4":"415-209-7369"}                                                                                                                                 
+ALLEN      {"C1":"2", "C4":"415-209-7499"}                                                                                                                                                              
+WARD       {"C1":"3", "C2":"Pancake", "C3":"Green", "C4":"415-209-7521"}                                                                                                                                
+JONES      {"C1":"4", "C2":"Pancake", "C3":"Yellow", "C4":"415-209-7566"}                                                                                                                               
+MARTIN     {"C1":"5", "C2":"Muffin", "C3":"Yellow", "C4":"415-209-7654"}                                                                                                                                
+BLAKE      {"C1":"6", "C2":"Pancake", "C3":"Yellow", "C4":"415-209-7698"}                                                                                                                               
+CLARK      {"C1":"7", "C2":"Pancake", "C3":"Yellow", "C4":"415-209-7782"}                                                                                                                               
+SCOTT                                                                                                                                                                                                   
+KING       {"C1":"9", "C2":"Pancake", "C4":"415-209-7839"}                                                                                                                                              
+TURNER     {"C1":"10", "C3":"Blue", "C4":"415-209-7844"}                                                                                                                                                
+ADAMS      {"C1":"11", "C2":"Muffin", "C3":"Blue", "C4":"415-209-7876"}                                                                                                                                 
+JAMES      {"C1":"12", "C2":"Muffin", "C3":"Blue", "C4":"415-209-7900"}                                                                                                                                 
+FORD       {"C1":"13", "C2":"Pancake", "C3":"Yellow", "C4":"415-209-7902"}                                                                                                                              
+MILLER     {"C1":"14", "C3":"Yellow", "C4":"415-209-7934"}                                                                                                                                              
+
+14 rows selected.
+
+SQL> 
+SQL> REM
+SQL> REM Selete the DC using the accessor.
+SQL> REM
+SQL> select ename, deptno,
+  2  	    COLUMN_GET(dyncol, 3) color,
+  3  	    COLUMN_GET(dyncol, 2) food,
+  4  	    COLUMN_GET(dyncol, 4) telephone
+  5  from xEMP;
+
+ENAME          DEPTNO COLOR           FOOD            TELEPHONE                                                                                                                                         
+---------- ---------- --------------- --------------- ---------------                                                                                                                                   
+SMITH              20 Green           Muffin          415-209-7369                                                                                                                                      
+ALLEN              30                                 415-209-7499                                                                                                                                      
+WARD               30 Green           Pancake         415-209-7521                                                                                                                                      
+JONES              20 Yellow          Pancake         415-209-7566                                                                                                                                      
+MARTIN             30 Yellow          Muffin          415-209-7654                                                                                                                                      
+BLAKE              30 Yellow          Pancake         415-209-7698                                                                                                                                      
+CLARK              10 Yellow          Pancake         415-209-7782                                                                                                                                      
+SCOTT              20                                                                                                                                                                                   
+KING               10                 Pancake         415-209-7839                                                                                                                                      
+TURNER             30 Blue                            415-209-7844                                                                                                                                      
+ADAMS              20 Blue            Muffin          415-209-7876                                                                                                                                      
+JAMES              30 Blue            Muffin          415-209-7900                                                                                                                                      
+FORD               20 Yellow          Pancake         415-209-7902                                                                                                                                      
+MILLER             10 Yellow                          415-209-7934                                                                                                                                      
+
+14 rows selected.
+
+SQL> 
+SQL> REM
+SQL> REM Show all the DC per row and determine which rows have column C2.
+SQL> REM
+SQL> select deptno, ename,
+  2  	    COLUMN_LIST(dyncol) list,
+  3  	    decode(COLUMN_EXISTS(dyncol, 2), 1, 'Yes', 'No') "Has C2?"
+  4  from xEMP order by deptno;
+
+    DEPTNO ENAME      LIST                           Has C2?                                                                                                                                            
+---------- ---------- ------------------------------ ----------                                                                                                                                         
+        10 CLARK      C1, C2, C3, C4                 Yes                                                                                                                                                
+        10 KING       C1, C2, C4                     Yes                                                                                                                                                
+        10 MILLER     C1, C3, C4                     No                                                                                                                                                 
+        20 JONES      C1, C2, C3, C4                 Yes                                                                                                                                                
+        20 FORD       C1, C2, C3, C4                 Yes                                                                                                                                                
+        20 ADAMS      C1, C2, C3, C4                 Yes                                                                                                                                                
+        20 SMITH      C1, C2, C3, C4                 Yes                                                                                                                                                
+        20 SCOTT                                     No                                                                                                                                                 
+        30 WARD       C1, C2, C3, C4                 Yes                                                                                                                                                
+        30 TURNER     C1, C3, C4                     No                                                                                                                                                 
+        30 ALLEN      C1, C4                         No                                                                                                                                                 
+        30 JAMES      C1, C2, C3, C4                 Yes                                                                                                                                                
+        30 BLAKE      C1, C2, C3, C4                 Yes                                                                                                                                                
+        30 MARTIN     C1, C2, C3, C4                 Yes                                                                                                                                                
+
+14 rows selected.
+
+SQL> 
+SQL> REM
+SQL> REM Remove the DC 2 for employees in department 10
+SQL> REM
+SQL> update xEMP set dyncol = COLUMN_DELETE(dyncol, 2)
+  2  where deptno = 10;
+
+3 rows updated.
+
+SQL> 
+SQL> select deptno, ename, COLUMN_LIST(dyncol) list,
+  2  	    decode(COLUMN_EXISTS(dyncol, 2), 1, 'Yes', 'No') "Has C2?"
+  3  from xEMP order by deptno;
+
+    DEPTNO ENAME      LIST                           Has C2?                                                                                                                                            
+---------- ---------- ------------------------------ ----------                                                                                                                                         
+        10 CLARK      C1, C3, C4                     No                                                                                                                                                 
+        10 KING       C1, C4                         No                                                                                                                                                 
+        10 MILLER     C1, C3, C4                     No                                                                                                                                                 
+        20 JONES      C1, C2, C3, C4                 Yes                                                                                                                                                
+        20 FORD       C1, C2, C3, C4                 Yes                                                                                                                                                
+        20 ADAMS      C1, C2, C3, C4                 Yes                                                                                                                                                
+        20 SMITH      C1, C2, C3, C4                 Yes                                                                                                                                                
+        20 SCOTT                                     No                                                                                                                                                 
+        30 WARD       C1, C2, C3, C4                 Yes                                                                                                                                                
+        30 TURNER     C1, C3, C4                     No                                                                                                                                                 
+        30 ALLEN      C1, C4                         No                                                                                                                                                 
+        30 JAMES      C1, C2, C3, C4                 Yes                                                                                                                                                
+        30 BLAKE      C1, C2, C3, C4                 Yes                                                                                                                                                
+        30 MARTIN     C1, C2, C3, C4                 Yes                                                                                                                                                
+
+14 rows selected.
+
+SQL> commit;
+
+Commit complete.
+
+SQL> 
+SQL> REM
+SQL> REM Adding a DC will insert one if column not present else update existing value
+SQL> REM
+SQL> update xEMP set dyncol = COLUMN_ADD(dyncol, 2, 'Pizza')
+  2  where deptno in (10, 20);
+
+8 rows updated.
+
+SQL> 
+SQL> select deptno, ename, COLUMN_GET(dyncol, 2) food
+  2  from xEMP order by deptno;
+
+    DEPTNO ENAME      FOOD                                                                                                                                                                              
+---------- ---------- ---------------                                                                                                                                                                   
+        10 CLARK      Pizza                                                                                                                                                                             
+        10 KING       Pizza                                                                                                                                                                             
+        10 MILLER     Pizza                                                                                                                                                                             
+        20 JONES      Pizza                                                                                                                                                                             
+        20 FORD       Pizza                                                                                                                                                                             
+        20 ADAMS      Pizza                                                                                                                                                                             
+        20 SMITH      Pizza                                                                                                                                                                             
+        20 SCOTT      Pizza                                                                                                                                                                             
+        30 WARD       Pancake                                                                                                                                                                           
+        30 TURNER                                                                                                                                                                                       
+        30 ALLEN                                                                                                                                                                                        
+        30 JAMES      Muffin                                                                                                                                                                            
+        30 BLAKE      Pancake                                                                                                                                                                           
+        30 MARTIN     Muffin                                                                                                                                                                            
+
+14 rows selected.
+
+SQL> commit;
+
+Commit complete.
+
+SQL> 
+SQL> REM
+SQL> REM Removing the last DC makes the column null, but adding a DC make it not null.
+SQL> REM
+SQL> select deptno, ename, COLUMN_LIST(dyncol) list from xEMP order by deptno;
+
+    DEPTNO ENAME      LIST                                                                                                                                                                              
+---------- ---------- ------------------------------                                                                                                                                                    
+        10 CLARK      C1, C2, C3, C4                                                                                                                                                                    
+        10 KING       C1, C2, C4                                                                                                                                                                        
+        10 MILLER     C1, C2, C3, C4                                                                                                                                                                    
+        20 JONES      C1, C2, C3, C4                                                                                                                                                                    
+        20 FORD       C1, C2, C3, C4                                                                                                                                                                    
+        20 ADAMS      C1, C2, C3, C4                                                                                                                                                                    
+        20 SMITH      C1, C2, C3, C4                                                                                                                                                                    
+        20 SCOTT      C2                                                                                                                                                                                
+        30 WARD       C1, C2, C3, C4                                                                                                                                                                    
+        30 TURNER     C1, C3, C4                                                                                                                                                                        
+        30 ALLEN      C1, C4                                                                                                                                                                            
+        30 JAMES      C1, C2, C3, C4                                                                                                                                                                    
+        30 BLAKE      C1, C2, C3, C4                                                                                                                                                                    
+        30 MARTIN     C1, C2, C3, C4                                                                                                                                                                    
+
+14 rows selected.
+
+SQL> 
+SQL> update xEMP set dyncol = COLUMN_DELETE(dyncol, 2) where ename = 'SCOTT';
+
+1 row updated.
+
+SQL> 
+SQL> select deptno, ename, COLUMN_LIST(dyncol) list from xEMP order by deptno;
+
+    DEPTNO ENAME      LIST                                                                                                                                                                              
+---------- ---------- ------------------------------                                                                                                                                                    
+        10 CLARK      C1, C2, C3, C4                                                                                                                                                                    
+        10 KING       C1, C2, C4                                                                                                                                                                        
+        10 MILLER     C1, C2, C3, C4                                                                                                                                                                    
+        20 JONES      C1, C2, C3, C4                                                                                                                                                                    
+        20 FORD       C1, C2, C3, C4                                                                                                                                                                    
+        20 ADAMS      C1, C2, C3, C4                                                                                                                                                                    
+        20 SMITH      C1, C2, C3, C4                                                                                                                                                                    
+        20 SCOTT                                                                                                                                                                                        
+        30 WARD       C1, C2, C3, C4                                                                                                                                                                    
+        30 TURNER     C1, C3, C4                                                                                                                                                                        
+        30 ALLEN      C1, C4                                                                                                                                                                            
+        30 JAMES      C1, C2, C3, C4                                                                                                                                                                    
+        30 BLAKE      C1, C2, C3, C4                                                                                                                                                                    
+        30 MARTIN     C1, C2, C3, C4                                                                                                                                                                    
+
+14 rows selected.
+
+SQL> 
+SQL> update xEMP set dyncol = COLUMN_ADD(dyncol, 27, 'Flying' ) where ename = 'SCOTT';
+
+1 row updated.
+
+SQL> 
+SQL> select deptno, ename, COLUMN_LIST(dyncol) list from xEMP order by deptno;
+
+    DEPTNO ENAME      LIST                                                                                                                                                                              
+---------- ---------- ------------------------------                                                                                                                                                    
+        10 CLARK      C1, C2, C3, C4                                                                                                                                                                    
+        10 KING       C1, C2, C4                                                                                                                                                                        
+        10 MILLER     C1, C2, C3, C4                                                                                                                                                                    
+        20 JONES      C1, C2, C3, C4                                                                                                                                                                    
+        20 FORD       C1, C2, C3, C4                                                                                                                                                                    
+        20 ADAMS      C1, C2, C3, C4                                                                                                                                                                    
+        20 SMITH      C1, C2, C3, C4                                                                                                                                                                    
+        20 SCOTT      C27                                                                                                                                                                               
+        30 WARD       C1, C2, C3, C4                                                                                                                                                                    
+        30 TURNER     C1, C3, C4                                                                                                                                                                        
+        30 ALLEN      C1, C4                                                                                                                                                                            
+        30 JAMES      C1, C2, C3, C4                                                                                                                                                                    
+        30 BLAKE      C1, C2, C3, C4                                                                                                                                                                    
+        30 MARTIN     C1, C2, C3, C4                                                                                                                                                                    
+
+14 rows selected.
+
+SQL> commit;
+
+Commit complete.
+
+SQL> 
+SQL> REM
+SQL> REM Use Function Indexes to create secondary indexes on specific DC column
+SQL> REM
+SQL> create index xEMP_food on xEMP(COLUMN_GET(dyncol, 2));
+
+Index created.
+
+SQL> 
+SQL> explain plan for
+  2    select /*+ use_index(e) */ ename from xEMP e
+  3    where COLUMN_GET(dyncol, 2) = 'Pizza';
+
+Explained.
+
+SQL> set echo off
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 4027673951                                                                                                                                                                             
+                                                                                                                                                                                                        
+-------------------------------------------------------------------------------------------------                                                                                                       
+| Id  | Operation                           | Name      | Rows  | Bytes | Cost (%CPU)| Time     |                                                                                                       
+-------------------------------------------------------------------------------------------------                                                                                                       
+|   0 | SELECT STATEMENT                    |           |     1 |  2009 |     1   (0)| 00:00:01 |                                                                                                       
+|   1 |  TABLE ACCESS BY INDEX ROWID BATCHED| XEMP      |     1 |  2009 |     1   (0)| 00:00:01 |                                                                                                       
+|*  2 |   INDEX RANGE SCAN                  | XEMP_FOOD |     1 |       |     1   (0)| 00:00:01 |                                                                                                       
+-------------------------------------------------------------------------------------------------                                                                                                       
+                                                                                                                                                                                                        
+Predicate Information (identified by operation id):                                                                                                                                                     
+---------------------------------------------------                                                                                                                                                     
+                                                                                                                                                                                                        
+   2 - access("SCOTT"."COLUMN_GET"("DYNCOL",2)='Pizza')                                                                                                                                                 
+                                                                                                                                                                                                        
+Note                                                                                                                                                                                                    
+-----                                                                                                                                                                                                   
+   - dynamic statistics used: dynamic sampling (level=2)                                                                                                                                                
+
+18 rows selected.
+
+SQL> 
+SQL> REM
+SQL> REM List the DC in an XML wrapper
+SQL> REM
+SQL> select ename, COLUMN_XML(dyncol) xml  from xEMP;
+
+ENAME      XML                                                                                                                                                                                          
+---------- --------------------------------------------------------------------------------                                                                                                             
+SMITH      <XML><C1>1</C1><C2>Pizza</C2><C3>Green</C3><C4>415-209-7369</C4></XML>                                                                                                                       
+ALLEN      <XML><C1>2</C1><C4>415-209-7499</C4></XML>                                                                                                                                                   
+WARD       <XML><C1>3</C1><C2>Pancake</C2><C3>Green</C3><C4>415-209-7521</C4></XML>                                                                                                                     
+JONES      <XML><C1>4</C1><C2>Pizza</C2><C3>Yellow</C3><C4>415-209-7566</C4></XML>                                                                                                                      
+MARTIN     <XML><C1>5</C1><C2>Muffin</C2><C3>Yellow</C3><C4>415-209-7654</C4></XML>                                                                                                                     
+BLAKE      <XML><C1>6</C1><C2>Pancake</C2><C3>Yellow</C3><C4>415-209-7698</C4></XML>                                                                                                                    
+CLARK      <XML><C1>7</C1><C2>Pizza</C2><C3>Yellow</C3><C4>415-209-7782</C4></XML>                                                                                                                      
+SCOTT      <XML><C27>Flying</C27></XML>                                                                                                                                                                 
+KING       <XML><C1>9</C1><C2>Pizza</C2><C4>415-209-7839</C4></XML>                                                                                                                                     
+TURNER     <XML><C1>10</C1><C3>Blue</C3><C4>415-209-7844</C4></XML>                                                                                                                                     
+ADAMS      <XML><C1>11</C1><C2>Pizza</C2><C3>Blue</C3><C4>415-209-7876</C4></XML>                                                                                                                       
+JAMES      <XML><C1>12</C1><C2>Muffin</C2><C3>Blue</C3><C4>415-209-7900</C4></XML>                                                                                                                      
+FORD       <XML><C1>13</C1><C2>Pizza</C2><C3>Yellow</C3><C4>415-209-7902</C4></XML>                                                                                                                     
+MILLER     <XML><C1>14</C1><C2>Pizza</C2><C3>Yellow</C3><C4>415-209-7934</C4></XML>                                                                                                                     
+
+14 rows selected.
+
+SQL> 
+SQL> REM
+SQL> REM Show the DC's internal representation (for interpretation see implementation)
+SQL> REM
+SQL> select ename, dyncol from xEMP;
+
+ENAME      DYNCOL                                                                                                                                                                                       
+---------- --------------------------------------------------                                                                                                                                           
+SMITH      4.1.2.3.4.1.5.5.12.$1PizzaGreen415-209-7369                                                                                                                                                  
+ALLEN      2.1.4.1.12.$2415-209-7499                                                                                                                                                                    
+WARD       4.1.2.3.4.1.7.5.12.$3PancakeGreen415-209-7521                                                                                                                                                
+JONES      4.1.2.3.4.1.5.6.12.$4PizzaYellow415-209-7566                                                                                                                                                 
+MARTIN     4.1.2.3.4.1.6.6.12.$5MuffinYellow415-209-7654                                                                                                                                                
+BLAKE      4.1.2.3.4.1.7.6.12.$6PancakeYellow415-209-7698                                                                                                                                               
+CLARK      4.1.2.3.4.1.5.6.12.$7PizzaYellow415-209-7782                                                                                                                                                 
+SCOTT      1.27.6.$Flying                                                                                                                                                                               
+KING       3.1.2.4.1.5.12.$9Pizza415-209-7839                                                                                                                                                           
+TURNER     3.1.3.4.2.4.12.$10Blue415-209-7844                                                                                                                                                           
+ADAMS      4.1.2.3.4.2.5.4.12.$11PizzaBlue415-209-7876                                                                                                                                                  
+JAMES      4.1.2.3.4.2.6.4.12.$12MuffinBlue415-209-7900                                                                                                                                                 
+FORD       4.1.2.3.4.2.5.6.12.$13PizzaYellow415-209-7902                                                                                                                                                
+MILLER     4.1.2.3.4.2.5.6.12.$14PizzaYellow415-209-7934                                                                                                                                                
+
+14 rows selected.
+
+SQL> 
+SQL> spool off

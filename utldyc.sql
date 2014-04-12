@@ -73,12 +73,9 @@ is
   function PICKLE(cols IN colT) 
            return varchar2
   is
-    compact constant boolean         := true;
     cids             varchar2(32000) := '';
     lens             varchar2(32000) := '';
     vals             varchar2(32000) := '';
-    pcid             number          := 0;
-    plen             number          := 1;
     len              number;
     skip_count       number          := 0;
   begin
@@ -89,21 +86,9 @@ is
         continue; 
       end if;
 
-      if (compact and cols(i).cid = pcid + 1) then 
-        cids := cids                || separator;
-      else
-        cids := cids || cols(i).cid || separator;
-      end if;
-      pcid := cols(i).cid;
-
+      cids := cids || cols(i).cid || separator;
       len := length(cols(i).val);
-      if (compact and len = plen) then
-        lens := lens         || separator;
-      else
-        lens := lens || len  || separator;
-      end if;
-      plen := len;
-
+      lens := lens || len  || separator;
       vals := vals || cols(i).val;
     end loop;
     return (cols.count - skip_count) || separator || cids || lens || '$' || vals;
@@ -482,6 +467,11 @@ create or replace function COLUMN_CREATE
      c49  varchar2  DEFAULT NULL, c50  varchar2  DEFAULT NULL) 
                    return varchar2 deterministic
 is
+$if dbms_db_version.ver_le_11_2 $then
+  -- Do nothing
+$else
+  PRAGMA UDF;
+$end
 begin
   return UTL_DYNAMIC_COLUMN.CREATE_NEW
             (c1,   c2,  c3,  c4,  c5,  c6,  c7,  c8,  c9, c10,
@@ -495,7 +485,13 @@ end;
 create or replace function COLUMN_EXISTS(dyncol varchar2, cid number) 
                   return number deterministic
 is
+$if dbms_db_version.ver_le_11_2 $then
+  -- Do nothing
+$else
+  PRAGMA UDF;
+$end
 begin
+
   return UTL_DYNAMIC_COLUMN.EXISTS(dyncol, cid);
 end;
 /
@@ -503,6 +499,11 @@ end;
 create or replace function COLUMN_GET(dyncol varchar2, cid number) 
                   return varchar2 deterministic
 is
+$if dbms_db_version.ver_le_11_2 $then
+  -- Do nothing
+$else
+  PRAGMA UDF;
+$end
 begin
   return UTL_DYNAMIC_COLUMN.GET(dyncol, cid);
 end;
@@ -511,6 +512,11 @@ end;
 create or replace function COLUMN_DELETE(dyncol varchar2, cid number) 
                   return varchar2 deterministic
 is
+$if dbms_db_version.ver_le_11_2 $then
+  -- Do nothing
+$else
+  PRAGMA UDF;
+$end
 begin
   return UTL_DYNAMIC_COLUMN.DELETE(dyncol, cid);
 end;
@@ -519,6 +525,11 @@ end;
 create or replace function COLUMN_ADD(dyncol varchar2, cid number, val varchar2) 
                   return varchar2 deterministic
 is
+$if dbms_db_version.ver_le_11_2 $then
+  -- Do nothing
+$else
+  PRAGMA UDF;
+$end
 begin
   return UTL_DYNAMIC_COLUMN.ADD(dyncol, cid, val);
 end;
@@ -528,6 +539,11 @@ create or replace function COLUMN_LIST(dyncol varchar2,
                                        column_prefix varchar2 default 'C')
                   return varchar2 deterministic
 is
+$if dbms_db_version.ver_le_11_2 $then
+  -- Do nothing
+$else
+  PRAGMA UDF;
+$end
 begin
   return UTL_DYNAMIC_COLUMN.LIST(dyncol, column_prefix);
 end;
@@ -537,6 +553,11 @@ create or replace function COLUMN_JSON(dyncol varchar2,
                                        column_prefix varchar2 default 'C')
                   return varchar2 deterministic
 is
+$if dbms_db_version.ver_le_11_2 $then
+  -- Do nothing
+$else
+  PRAGMA UDF;
+$end
 begin
   return UTL_DYNAMIC_COLUMN.JSON(dyncol, column_prefix);
 end;
@@ -546,6 +567,11 @@ create or replace function COLUMN_XML(dyncol varchar2,
                                       column_prefix varchar2 default 'C')
                   return varchar2 deterministic
 is
+$if dbms_db_version.ver_le_11_2 $then
+  -- Do nothing
+$else
+  PRAGMA UDF;
+$end
 begin
   return UTL_DYNAMIC_COLUMN.XML(dyncol, column_prefix);
 end;
