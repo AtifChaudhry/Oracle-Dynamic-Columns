@@ -4,11 +4,11 @@
   <head>
     <meta charset='utf-8' />
     <meta http-equiv="X-UA-Compatible" content="chrome=1" />
-    <meta name="description" content="PL/SQL Dynamic Columns : Multiple virtual columns stored inside a single physical column." />
+    <meta name="description" content="Oracle Dynamic Columns : Multiple virtual columns stored inside a single physical column." />
 
     <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
 
-    <title>PL/SQL Dynamic Columns</title>
+    <title>Oracle Dynamic Columns</title>
   </head>
 
   <body>
@@ -18,7 +18,7 @@
         <header class="inner">
           <a id="forkme_banner" href="https://github.com/AtifChaudhry/PLSQL-Dynamic-Columns">View on GitHub</a>
 
-          <h1 id="project_title">PL/SQL Dynamic Columns</h1>
+          <h1 id="project_title">Oracle Dynamic Columns</h1>
           <h2 id="project_tagline">Multiple virtual columns stored inside a single physical column.</h2>
 
             <section id="downloads">
@@ -33,14 +33,22 @@
       <section id="main_content" class="inner">
         <p>An Oracle PL/SQL package to support packing variable number of virtual columns inside a single SQL table column. </p>
 
-<p>This package implements functionality equivalent to that offered by MariaDB-5.3 Dynamic Columns (<a href="https://mariadb.com/kb/en/dynamic-columns/">https://mariadb.com/kb/en/dynamic-columns/</a>).</p>
+<p>This package implements functionality equivalent to that offered by <a href="https://mariadb.com/kb/en/dynamic-columns/">MariaDB-5.3 Dynamic Columns</a>:</p>
+
+<blockquote>
+<p>Dynamic columns allows one to store different sets of columns for each row in a table. It works by storing a set of columns in a blob and having a small set of functions to manipulate it.</p>
+
+<p>Dynamic columns should be used when it is not possible to use regular columns.</p>
+
+<p>A typical use case is when one needs to store items that may have many different attributes (like size, color, weight, etc), and the set of possible attributes is very large and/or unknown in advance. In that case, attributes can be put into dynamic columns.</p>
+</blockquote>
       </section>
     </div>
 
     <!-- FOOTER  -->
     <div id="footer_wrap" class="outer">
       <footer class="inner">
-        <p class="copyright">PL/SQL Dynamic Columns maintained by <a href="https://github.com/AtifChaudhry">AtifChaudhry</a></p>
+        <p class="copyright">Oracle Dynamic Columns maintained by <a href="https://github.com/AtifChaudhry">AtifChaudhry</a></p>
         <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
       </footer>
     </div>
