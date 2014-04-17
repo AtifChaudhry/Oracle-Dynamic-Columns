@@ -39,9 +39,9 @@ begin
     || ' comm              number(7,2),'
     || ' deptno            number(2),'
   $if dbms_db_version.ver_le_11_2 $then
-    || ' dyncol            varchar2(4000)         /* DC storage */'
+    || ' dyncol            varchar2(4000)         /* DC storage 4K */'
   $else
-    || ' dyncol            varchar2(4000)        /* DC storage */'
+    || ' dyncol            varchar2(4000)        /* DC storage 32K */'
   $end
     || ')';
 end;
@@ -69,6 +69,11 @@ REM
 REM List the DC in an JSON wrapper
 REM
 select ename, COLUMN_JSON(dyncol) json from xEMP;
+
+REM
+REM List the DC in an XML wrapper
+REM
+select ename, COLUMN_XML(dyncol) xml  from xEMP;
 
 REM
 REM Selete the DC using the accessor.
@@ -122,8 +127,9 @@ update xEMP set dyncol = COLUMN_ADD(dyncol, 27, 'Flying' ) where ename = 'SCOTT'
 select deptno, ename, COLUMN_LIST(dyncol) list from xEMP order by deptno;
 commit;
 
+
 REM
-REM Use Function Indexes to create secondary indexes on specific DC column
+REM Function Index (I): Secondary indexes on a specific DC column
 REM
 create index xEMP_food on xEMP(COLUMN_GET(dyncol, 2));
 
@@ -135,9 +141,26 @@ set echo off
 set echo on
 
 REM
-REM List the DC in an XML wrapper
+REM Virtual Columns: Expose some DC's as virtual columns
+REM [Note: Requires version >= 11.1]
 REM
-select ename, COLUMN_XML(dyncol) xml  from xEMP;
+alter table xEMP add  color      as (COLUMN_GET(dyncol, 3));
+alter table xEMP add  telephone  as (COLUMN_GET(dyncol, 4));
+
+select ename, color, telephone from xEMP;
+
+REM
+REM Function Index (II):  Secondary indexes on a virtual column which is wrapping a DC
+REM [Note: Requires version >= 11.1]
+REM
+create index xEMP_color on xEMP(color);
+
+explain plan for 
+  select /*+ use_index(e) */ ename from xEMP e 
+  where color = 'Blue';
+set echo off
+@?/rdbms/admin/utlxpls
+set echo on
 
 REM
 REM Show the DC's internal representation (for interpretation see implementation)

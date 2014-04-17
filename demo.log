@@ -1,5 +1,3 @@
-SQL> 
-SQL> set echo	    on
 SQL> set pagesize 1000
 SQL> set linesize  200
 SQL> 
@@ -33,9 +31,9 @@ SQL> begin
  10  	 || ' comm		number(7,2),'
  11  	 || ' deptno		number(2),'
  12    $if dbms_db_version.ver_le_11_2 $then
- 13  	 || ' dyncol		varchar2(4000)	       /* DC storage */'
+ 13  	 || ' dyncol		varchar2(4000)	       /* DC storage 4K */'
  14    $else
- 15  	 || ' dyncol		varchar2(4000)	      /* DC storage */'
+ 15  	 || ' dyncol		varchar2(4000)	      /* DC storage 32K */'
  16    $end
  17  	 || ')';
  18  end;
@@ -86,6 +84,31 @@ ADAMS      {"C1":"11", "C2":"Muffin", "C3":"Blue", "C4":"415-209-7876"}
 JAMES      {"C1":"12", "C2":"Muffin", "C3":"Blue", "C4":"415-209-7900"}                                                                                                                                 
 FORD       {"C1":"13", "C2":"Pancake", "C3":"Yellow", "C4":"415-209-7902"}                                                                                                                              
 MILLER     {"C1":"14", "C3":"Yellow", "C4":"415-209-7934"}                                                                                                                                              
+
+14 rows selected.
+
+SQL> 
+SQL> REM
+SQL> REM List the DC in an XML wrapper
+SQL> REM
+SQL> select ename, COLUMN_XML(dyncol) xml  from xEMP;
+
+ENAME      XML                                                                                                                                                                                          
+---------- --------------------------------------------------------------------------------                                                                                                             
+SMITH      <XML><C1>1</C1><C2>Muffin</C2><C3>Green</C3><C4>415-209-7369</C4></XML>                                                                                                                      
+ALLEN      <XML><C1>2</C1><C4>415-209-7499</C4></XML>                                                                                                                                                   
+WARD       <XML><C1>3</C1><C2>Pancake</C2><C3>Green</C3><C4>415-209-7521</C4></XML>                                                                                                                     
+JONES      <XML><C1>4</C1><C2>Pancake</C2><C3>Yellow</C3><C4>415-209-7566</C4></XML>                                                                                                                    
+MARTIN     <XML><C1>5</C1><C2>Muffin</C2><C3>Yellow</C3><C4>415-209-7654</C4></XML>                                                                                                                     
+BLAKE      <XML><C1>6</C1><C2>Pancake</C2><C3>Yellow</C3><C4>415-209-7698</C4></XML>                                                                                                                    
+CLARK      <XML><C1>7</C1><C2>Pancake</C2><C3>Yellow</C3><C4>415-209-7782</C4></XML>                                                                                                                    
+SCOTT                                                                                                                                                                                                   
+KING       <XML><C1>9</C1><C2>Pancake</C2><C4>415-209-7839</C4></XML>                                                                                                                                   
+TURNER     <XML><C1>10</C1><C3>Blue</C3><C4>415-209-7844</C4></XML>                                                                                                                                     
+ADAMS      <XML><C1>11</C1><C2>Muffin</C2><C3>Blue</C3><C4>415-209-7876</C4></XML>                                                                                                                      
+JAMES      <XML><C1>12</C1><C2>Muffin</C2><C3>Blue</C3><C4>415-209-7900</C4></XML>                                                                                                                      
+FORD       <XML><C1>13</C1><C2>Pancake</C2><C3>Yellow</C3><C4>415-209-7902</C4></XML>                                                                                                                   
+MILLER     <XML><C1>14</C1><C3>Yellow</C3><C4>415-209-7934</C4></XML>                                                                                                                                   
 
 14 rows selected.
 
@@ -303,8 +326,9 @@ SQL> commit;
 Commit complete.
 
 SQL> 
+SQL> 
 SQL> REM
-SQL> REM Use Function Indexes to create secondary indexes on specific DC column
+SQL> REM Function Index (I): Secondary indexes on a specific DC column
 SQL> REM
 SQL> create index xEMP_food on xEMP(COLUMN_GET(dyncol, 2));
 
@@ -344,28 +368,79 @@ Note
 
 SQL> 
 SQL> REM
-SQL> REM List the DC in an XML wrapper
+SQL> REM Virtual Columns: Expose some DC's as virtual columns
+SQL> REM [Note: Requires version >= 11.1]
 SQL> REM
-SQL> select ename, COLUMN_XML(dyncol) xml  from xEMP;
+SQL> alter table xEMP add  color      as (COLUMN_GET(dyncol, 3));
 
-ENAME      XML                                                                                                                                                                                          
----------- --------------------------------------------------------------------------------                                                                                                             
-SMITH      <XML><C1>1</C1><C2>Pizza</C2><C3>Green</C3><C4>415-209-7369</C4></XML>                                                                                                                       
-ALLEN      <XML><C1>2</C1><C4>415-209-7499</C4></XML>                                                                                                                                                   
-WARD       <XML><C1>3</C1><C2>Pancake</C2><C3>Green</C3><C4>415-209-7521</C4></XML>                                                                                                                     
-JONES      <XML><C1>4</C1><C2>Pizza</C2><C3>Yellow</C3><C4>415-209-7566</C4></XML>                                                                                                                      
-MARTIN     <XML><C1>5</C1><C2>Muffin</C2><C3>Yellow</C3><C4>415-209-7654</C4></XML>                                                                                                                     
-BLAKE      <XML><C1>6</C1><C2>Pancake</C2><C3>Yellow</C3><C4>415-209-7698</C4></XML>                                                                                                                    
-CLARK      <XML><C1>7</C1><C2>Pizza</C2><C3>Yellow</C3><C4>415-209-7782</C4></XML>                                                                                                                      
-SCOTT      <XML><C27>Flying</C27></XML>                                                                                                                                                                 
-KING       <XML><C1>9</C1><C2>Pizza</C2><C4>415-209-7839</C4></XML>                                                                                                                                     
-TURNER     <XML><C1>10</C1><C3>Blue</C3><C4>415-209-7844</C4></XML>                                                                                                                                     
-ADAMS      <XML><C1>11</C1><C2>Pizza</C2><C3>Blue</C3><C4>415-209-7876</C4></XML>                                                                                                                       
-JAMES      <XML><C1>12</C1><C2>Muffin</C2><C3>Blue</C3><C4>415-209-7900</C4></XML>                                                                                                                      
-FORD       <XML><C1>13</C1><C2>Pizza</C2><C3>Yellow</C3><C4>415-209-7902</C4></XML>                                                                                                                     
-MILLER     <XML><C1>14</C1><C2>Pizza</C2><C3>Yellow</C3><C4>415-209-7934</C4></XML>                                                                                                                     
+Table altered.
+
+SQL> alter table xEMP add  telephone  as (COLUMN_GET(dyncol, 4));
+
+Table altered.
+
+SQL> 
+SQL> select ename, color, telephone from xEMP;
+
+ENAME      COLOR           TELEPHONE                                                                                                                                                                    
+---------- --------------- ---------------                                                                                                                                                              
+SMITH      Green           415-209-7369                                                                                                                                                                 
+ALLEN                      415-209-7499                                                                                                                                                                 
+WARD       Green           415-209-7521                                                                                                                                                                 
+JONES      Yellow          415-209-7566                                                                                                                                                                 
+MARTIN     Yellow          415-209-7654                                                                                                                                                                 
+BLAKE      Yellow          415-209-7698                                                                                                                                                                 
+CLARK      Yellow          415-209-7782                                                                                                                                                                 
+SCOTT                                                                                                                                                                                                   
+KING                       415-209-7839                                                                                                                                                                 
+TURNER     Blue            415-209-7844                                                                                                                                                                 
+ADAMS      Blue            415-209-7876                                                                                                                                                                 
+JAMES      Blue            415-209-7900                                                                                                                                                                 
+FORD       Yellow          415-209-7902                                                                                                                                                                 
+MILLER     Yellow          415-209-7934                                                                                                                                                                 
 
 14 rows selected.
+
+SQL> 
+SQL> REM
+SQL> REM Function Index (II):  Secondary indexes on a virtual column which is wrapping a DC
+SQL> REM [Note: Requires version >= 11.1]
+SQL> REM
+SQL> create index xEMP_color on xEMP(color);
+
+Index created.
+
+SQL> 
+SQL> explain plan for
+  2    select /*+ use_index(e) */ ename from xEMP e
+  3    where color = 'Blue';
+
+Explained.
+
+SQL> set echo off
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2476763134                                                                                                                                                                             
+                                                                                                                                                                                                        
+--------------------------------------------------------------------------------------------------                                                                                                      
+| Id  | Operation                           | Name       | Rows  | Bytes | Cost (%CPU)| Time     |                                                                                                      
+--------------------------------------------------------------------------------------------------                                                                                                      
+|   0 | SELECT STATEMENT                    |            |     1 |  2009 |     1   (0)| 00:00:01 |                                                                                                      
+|   1 |  TABLE ACCESS BY INDEX ROWID BATCHED| XEMP       |     1 |  2009 |     1   (0)| 00:00:01 |                                                                                                      
+|*  2 |   INDEX RANGE SCAN                  | XEMP_COLOR |     1 |       |     1   (0)| 00:00:01 |                                                                                                      
+--------------------------------------------------------------------------------------------------                                                                                                      
+                                                                                                                                                                                                        
+Predicate Information (identified by operation id):                                                                                                                                                     
+---------------------------------------------------                                                                                                                                                     
+                                                                                                                                                                                                        
+   2 - access("COLOR"='Blue')                                                                                                                                                                           
+                                                                                                                                                                                                        
+Note                                                                                                                                                                                                    
+-----                                                                                                                                                                                                   
+   - dynamic statistics used: dynamic sampling (level=2)                                                                                                                                                
+
+18 rows selected.
 
 SQL> 
 SQL> REM
